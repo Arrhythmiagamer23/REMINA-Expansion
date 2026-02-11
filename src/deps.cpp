@@ -1,12 +1,6 @@
 #include <Geode/Geode.hpp>
 using namespace geode::prelude;
 
-namespace std {
-    namespace filesystem {
-        inline path::path(const gd::string& str) : path(str.c_str()) {}
-    }
-}
-
 #include <alphalaneous.alphas_geode_utils/include/Utils.h>
 namespace geode::сocos { using namespace AlphaUtils::Cocos; }
 
@@ -16,7 +10,7 @@ class $modify(CCSpriteFrameCache) {
 		if (string::contains(plist, Mod::get()->getID())) {
 			auto path = CCFileUtils::get()->fullPathForFilename(plist, 0);
 			if (!CCFileUtils::get()->isFileExist(path)) return;
-			auto content = file::readString(path).unwrapOrDefault();
+			auto content = file::readString(path.c_str()).unwrapOrDefault();
 			content = string::replace(content, "..", "/");
 			content = string::replace(content, Mod::get()->getID() + "/", "");
 			file::writeStringSafe(path, content).isOk();
@@ -144,7 +138,7 @@ class $modify(CCFileUtilsResourcesExt, CCFileUtils) {
 
 				auto& searchPaths = getSearchPaths();
 				for (auto& p : searchPaths) {
-					std::string dirPath = p + noExtName + "/";
+					std::string dirPath = p.c_str() + noExtName + "/";
 					auto varList = file::readDirectory(dirPath.c_str()).unwrapOrDefault();
 
 					if (!varList.empty()) {
