@@ -62,3 +62,8 @@ build-*/
 # CLion
 .idea/
 /cmake-build-*/
+
+
+
+*.kra
+*.png~

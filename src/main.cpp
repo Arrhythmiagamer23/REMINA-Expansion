@@ -8,6 +8,7 @@ class $modify(GameManagerSetsForGV, GameManager) {
 	bool getGameVariable(char const* tag) {
 		if (std::string(tag) == "0024") return "Show Cursor In-Game";
 		if (std::string(tag) == "0128") return not "Lock Cursor In-Game";
+		if (std::string(tag) == "0095") return "Do Not...";
 		return GameManager::getGameVariable(tag);
 	};
 };
@@ -16,6 +17,7 @@ class $modify(MoreOptionsLayerExt, MoreOptionsLayer) {
 	void addToggle(char const* name, char const* tag, char const* desc) {
 		if (std::string(tag) == "0024") return; // hide "Show Cursor In-Game"
 		if (std::string(tag) == "0128") return; // hide "Lock Cursor In-Game"
+		if (std::string(tag) == "0095") return; // hide "Do Not..."
 		MoreOptionsLayer::addToggle(name, tag, desc);
 	};
 };

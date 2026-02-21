@@ -1,10 +1,7 @@
-#include <Geode/Geode.hpp>
-using namespace geode::prelude;
+#include <.hpp>
 
 #include <user95401.game-objects-factory/include/main.hpp>
 #include <user95401.game-objects-factory/include/impl.hpp>
-
-#include <libs/httplib.h>
 
 #include <Geode/modify/GJGameLoadingLayer.hpp>
 class $modify(GJGameLoadingLayerFuckYouuu, GJGameLoadingLayer) {
@@ -12,34 +9,6 @@ class $modify(GJGameLoadingLayerFuckYouuu, GJGameLoadingLayer) {
 		Ref layer = EditLevelLayer::create(level);
 		switchToScene(layer);
 		return nullptr;
-	}
-};
-
-class DataNode : public CCNode {
-public:
-	std::string _json_str;
-	auto get(std::string_view key) {
-		return matjson::parse(_json_str).unwrapOrDefault()[key];
-	}
-	void set(std::string_view key, matjson::Value val) {
-		auto parse = matjson::parse(_json_str).unwrapOrDefault();
-		parse[key] = val;
-		_json_str = parse.dump(matjson::NO_INDENTATION);
-	}
-	CREATE_FUNC(DataNode);
-	static auto create(std::string id) {
-		auto a = create();
-		a->setID(id);
-		return a;
-	}
-	static auto at(CCNode* container, std::string id = "") {
-		auto me = typeinfo_cast<DataNode*>(container->getUserObject(id));
-		if (!me) {
-			me = create();
-			container->setUserObject(id, me);
-			log::debug("creating data node {} for {}...", me, container);
-		}
-		return me;
 	}
 };
 
@@ -632,27 +601,6 @@ class $modify(UILayerKeysExt, UILayer) {
 		m_gameLayer->gameEventTriggered((GJGameEvent)eventID, 0, 0);
 		m_gameLayer->gameEventTriggered((GJGameEvent)eventID, 0, 1 + !p1);
 	}
-};
-
-class KeyEventListener : public CCNode, public CCKeyboardDelegate {
-public:
-	KeyEventListener() { CCKeyboardDispatcher::get()->addDelegate(this); };
-	void onExit() override {
-		CCNode::onExit();
-		CCKeyboardDispatcher::get()->removeDelegate(this);
-	}
-	CREATE_FUNC(KeyEventListener);
-	void keyDown(enumKeyCodes key) override {
-		if (m_keyDown) m_keyDown(key);
-	}
-	void keyUp(enumKeyCodes key) override {
-		if (m_keyUp) m_keyUp(key);
-	}
-	auto onKeyDown(std::function<void(enumKeyCodes key)> keyDown) { m_keyDown = keyDown; return this; }
-	auto onKeyUp(std::function<void(enumKeyCodes key)> keyUp) { m_keyUp = keyUp; return this; }
-
-	std::function<void(enumKeyCodes key)> m_keyDown = [](enumKeyCodes) {};
-	std::function<void(enumKeyCodes key)> m_keyUp = [](enumKeyCodes) {};
 };
 
 #include <Geode/modify/SelectEventLayer.hpp>

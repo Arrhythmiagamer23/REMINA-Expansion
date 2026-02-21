@@ -1,48 +1,7 @@
 #include <Geode/Geode.hpp>
 using namespace geode::prelude;
 
-namespace fs {
-	using namespace std::filesystem;
-	auto err = std::error_code{};
-};
-
-namespace geode::cocos {
-	static inline std::string getClassName(cocos2d::CCObject* obj, bool removeNamespace = false) {
-		if (!obj) return "nullptr";
-
-		std::string ret;
-
-#ifdef GEODE_IS_WINDOWS
-		ret = typeid(*obj).name();
-		constexpr std::string_view classPrefix = "class ";
-		constexpr std::string_view structPrefix = "struct ";
-
-		auto removeAll = [](std::string& str, std::string_view prefix) {
-			size_t pos = 0;
-			while ((pos = str.find(prefix, pos)) != std::string::npos) {
-				str.erase(pos, prefix.size());
-			}
-			};
-
-		removeAll(ret, classPrefix);
-		removeAll(ret, structPrefix);
-#else 
-		int status = 0;
-		auto demangled = abi::__cxa_demangle(typeid(*obj).name(), nullptr, nullptr, &status);
-		if (status == 0 && demangled) {
-			ret = demangled;
-		}
-		free(demangled);
-#endif
-		if (removeNamespace) {
-			if (auto pos = ret.rfind("::"); pos != std::string::npos) {
-				ret = ret.substr(pos + 2);
-			}
-		}
-
-		return ret;
-	}
-}
+#include <.hpp>
 
 #include <Geode/modify/CCString.hpp>
 class $modify(CCStringNilCallFix, CCString) {
@@ -299,16 +258,18 @@ class $modify(CCSpriteExt, CCSprite) {
 
 		return spr;
 	}
-
+	static auto createAsSizeFixedSpr(const char* pszName, float h) {
+		auto* spr = CCSprite::create(pszName);
+		queueInMainThread([spr = Ref(spr), h] {
+			if (spr) limitNodeHeight(spr, h, 99.f, 0.1f);
+			});
+		return spr;
+	}
 	static CCSprite* createWithSpriteFrameName(const char* pszName) {
-		if (strcmp(pszName, "GJ_logo_001.png") == 0) {
-			if (auto* spr = CCSprite::create(pszName)) {
-				queueInMainThread([spr = Ref(spr)] {
-					if (spr) limitNodeHeight(spr, 44.750f, 99.f, 0.1f);
-					});
-				return spr;
-			}
-		}
+		if (strcmp(pszName, "GJ_logo_001.png") == 0) 
+			return createAsSizeFixedSpr(pszName, 44.750f);
+		if (strcmp(pszName, "RobTopLogoBig_001.png") == 0) 
+			return createAsSizeFixedSpr(pszName, 24.000f);
 
 		auto* spr = CCSprite::createWithSpriteFrameName(pszName);
 
@@ -405,8 +366,9 @@ class $modify(MenuLayerExt, MenuLayer) {
 		if (!isVideoOptionsOpen) {
 
 			static int notJustLaunched = false;
-			if (notJustLaunched++) return MenuLayer::scene(isVideoOptionsOpen);
-			FMODAudioEngine::get()->playEffect("achievement_01.ogg");
+			if (notJustLaunched++) {} else {
+				FMODAudioEngine::get()->playEffect("achievement_01.ogg");
+			}
 
 			auto issues = std::vector<std::string>();
 			for (auto dep : getMod()->getMetadataRef().getDependencies()) {
@@ -431,7 +393,13 @@ class $modify(MenuLayerExt, MenuLayer) {
 			}
 			//popup
 			Ref popup = MDPopup::create(
-				"THE DEPENDENCIES...", stream.str(), "Restart", nullptr, [](bool) {
+				"THE DEPENDENCIES...", stream.str(), "Restart", "Open Geode", [](bool a) {
+					if (a) {
+						GameManager::get()->fadeInMusic("menuLoop/OM_Desolate.mp3");
+						CCDirector::get()->m_pRunningScene->stopAllActions();
+						CCScheduler::get()->setTimeScale(0.5f);
+						return geode::openModsList();
+					}
 					game::restart(true);
 				}
 			);
@@ -457,16 +425,23 @@ class $modify(MenuLayerExt, MenuLayer) {
 			addSideArt(popup);
 			//mouse particle
 			Ref sc = CCScene::create();
-			sc->addChild(popup, -INT_MAX, "popup"_h);
+			sc->addChild(popup, -1 - (INT_MAX), "popup"_h);
 			sc->runAction(CCRepeatForever::create(CCSequence::createWithTwoActions(
 				CCDelayTime::create(.01f), CallFuncExt::create(
 					[sc, bg, popup] {
+						//...
+						for (auto l : sc->getChildrenExt<CCLayer>()) {
+							if (l == popup) continue;
+							l->setZOrder(INT_MAX - 10);
+						}
+						//mouse-particle
 						auto particle = sc->getChildByTag("mouse-particle"_h);
 						if (!particle) {
 							particle = CCParticleSystemQuad::create("keyEffect.plist", 0);
 							particle->setScale(41.150f, 0.325f);
 							sc->addChild(particle, INT_MAX, "mouse-particle"_h);
 						}
+						particle->setZOrder(INT_MAX);
 						particle->setPosition(getMousePos());
 						if (!sc->getChildByTag("popup"_h)) game::restart(true);
 						//bg
