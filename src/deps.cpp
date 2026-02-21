@@ -66,10 +66,6 @@ class $modify(CCObjectCallFix, CCObject) {
 		if (!this) log::error("{}->{}", this, __func__);
 		return this ? CCObject::autorelease() : new CCObject();
 	};
-	CCObject* copy(void) {
-		if (!this) log::error("{}->{}", this, __func__);
-		return this ? CCObject::copy() : new CCObject();
-	};
 };
 
 #include <Geode/modify/CCSpriteFrameCache.hpp>

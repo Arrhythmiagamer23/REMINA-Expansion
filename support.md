@@ -1,4 +1,4 @@
 # https://discord.gg/NXbbv2HZGg
-## https://t.me/LatterRarity70
+## https://t.me/lil2kki_ch
 
 https://remina.bccst.ru
