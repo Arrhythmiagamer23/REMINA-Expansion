@@ -1,6 +1,11 @@
 #include <Geode/Geode.hpp>
 using namespace geode::prelude;
 
+namespace fs {
+	using namespace std::filesystem;
+	auto err = std::error_code{};
+};
+
 namespace geode::cocos {
 	static inline std::string getClassName(cocos2d::CCObject* obj, bool removeNamespace = false) {
 		if (!obj) return "nullptr";
@@ -177,17 +182,14 @@ class $modify(CCFileUtilsResourcesExt, CCFileUtils) {
 		if (lastDot != std::string_view::npos && lastDot > 2) {
 			std::string noExtName(fileName.substr(0, lastDot));
 
-			// Проверяем кеш: уже искали эту директорию?
 			auto it = s_randomDirs.find(noExtName);
 			if (it != s_randomDirs.end()) {
-				// Директория найдена - берём случайный файл
 				if (!it->second.empty()) {
 					size_t idx = std::rand() % it->second.size();
-					return CCFileUtils::fullPathForFilename(it->second[idx].c_str(), skipSuffix); // или верни it->second[idx] если нужен прямой путь
+					return CCFileUtils::fullPathForFilename(it->second[idx].c_str(), skipSuffix);
 				}
 			}
 			else if (s_checkedDirs.find(noExtName) == s_checkedDirs.end()) {
-				// Ещё не проверяли - ищем ОДИН РАЗ
 				s_checkedDirs.insert(noExtName);
 
 				auto& searchPaths = getSearchPaths();
@@ -196,7 +198,6 @@ class $modify(CCFileUtilsResourcesExt, CCFileUtils) {
 					auto varList = file::readDirectory(dirPath.c_str()).unwrapOrDefault();
 
 					if (!varList.empty()) {
-						// Сохраняем в кеш
 						auto& cached = s_randomDirs[noExtName];
 						cached.reserve(varList.size());
 						for (auto& entry : varList) {
@@ -205,7 +206,7 @@ class $modify(CCFileUtilsResourcesExt, CCFileUtils) {
 
 						log::debug("{} -> {} files", noExtName, cached.size());
 						size_t idx = std::rand() % cached.size();
-						return CCFileUtils::fullPathForFilename(cached[idx].c_str(), skipSuffix); // заменить на правильный путь если нужно
+						return CCFileUtils::fullPathForFilename(cached[idx].c_str(), skipSuffix);
 					}
 				}
 			}
@@ -488,4 +489,100 @@ class $modify(MenuLayerExt, MenuLayer) {
 		} //!isVideoOptionsOpen
 		return MenuLayer::scene(isVideoOptionsOpen);
 	};
+	bool init() {
+		if (!MenuLayer::init()) return false;
+
+		static auto id = getMod()->getID();
+		static auto repo = getMod()->getMetadataRef().getLinks().getSourceURL().value_or("https://github.com/lil2kki/REMINA");
+
+		auto webListener = new EventListener<web::WebTask>;
+		webListener->bind(
+			[_this = Ref(this), webListener](web::WebTask::Event* e) {
+				if (web::WebProgress* prog = e->getProgress()) {
+					//log::debug("{}", prog->downloadTotal());
+
+					if (prog->downloadTotal() > 0) void(); else return;
+
+					auto installed_size = fs::file_size(getMod()->getPackagePath(), fs::err);
+					auto actual_size = prog->downloadTotal();
+
+					if (installed_size == actual_size) return;
+
+					auto pop = geode::createQuickPopup(
+						"Update!",
+						fmt::format(
+							"Latest release size mismatch with installed one!"
+							"\n" "Download latest release of mod?"
+						),
+						"Later.", "Yes", [_this](CCNode* pop, bool Yes) {
+							if (!Yes) return;
+
+							_this->setVisible(0);
+
+							GameManager::get()->fadeInMusic("menuLoop/OM_Lone.mp3");
+
+							auto req = web::WebRequest();
+
+							Ref state_win = Notification::create("Downloading... (///%)");
+							state_win->setTime(1337.f);
+							state_win->show();
+
+							if (state_win->m_pParent) {
+								auto loading_bg = CCSprite::create("GJ_gradientBG.png");
+								if (loading_bg) {
+									loading_bg->setID("loading_bg");
+									loading_bg->setAnchorPoint(CCPointMake(0.f, 0.f));
+									loading_bg->setScaleX(_this->getContentWidth() / loading_bg->getContentWidth());
+									loading_bg->setScaleY(_this->getContentHeight() / loading_bg->getContentHeight());
+									state_win->m_pParent->addChild(loading_bg);
+								}
+							}
+
+							auto listener = new EventListener<web::WebTask>;
+							listener->bind(
+								[state_win](web::WebTask::Event* e) {
+									if (web::WebProgress* prog = e->getProgress()) {
+										state_win->setString(fmt::format("Downloading... ({}%)", (int)prog->downloadProgress().value_or(000)));
+									}
+									if (web::WebResponse* res = e->getValue()) {
+										std::string data = res->string().unwrapOr("no res");
+										if (res->code() < 399) {
+											log::debug("{}", res->into(getMod()->getPackagePath()).err());
+											game::restart();
+										}
+										else {
+											auto asd = geode::createQuickPopup(
+												"Request exception",
+												data,
+												"Nah", nullptr, 420.f, nullptr, false
+											);
+											asd->show();
+										};
+									}
+								}
+							);
+
+							listener->setFilter(req.send(
+								"GET",
+								repo + "/releases/latest/download/" + id + ".geode"
+							));
+
+						}, false
+					);
+					pop->m_scene = _this;
+					pop->show();
+
+					e->cancel();
+					webListener->disable();
+					delete webListener;
+				}
+			}
+		);
+		//size check
+		webListener->setFilter(
+			web::WebRequest().get(repo + "/releases/latest/download/" + id + ".geode")
+		);
+
+		return true;
+	}
 };

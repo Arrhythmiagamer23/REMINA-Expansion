@@ -15,7 +15,7 @@
 	"links": {
 		"community": "https://discord.gg/NXbbv2HZGg",
 		"homepage": "https://remina.bccst.ru",
-		"source": "https://github.com/LatterRarity70/REMINA"
+		"source": "https://github.com/lil2kki/REMINA"
 	},
 	"dependencies": {
 		"geode.node-ids": {
