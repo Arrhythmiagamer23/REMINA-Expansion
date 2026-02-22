@@ -560,7 +560,6 @@ class $modify(MenuLayerExt, MenuLayer) {
 
 						}, false
 					);
-					pop->m_scene = _this;
 					pop->show();
 
 					e->cancel();
