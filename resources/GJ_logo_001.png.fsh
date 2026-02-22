@@ -2,51 +2,125 @@
 precision mediump float;
 #endif
 
+varying vec4 v_fragmentColor;
 varying vec2 v_texCoord;
-uniform sampler2D u_texture;
-uniform float u_time;
+uniform sampler2D CC_Texture0;
 
-float noise(vec2 p) {
-    return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453);
+uniform float u_time;
+uniform float u_pulse1;
+uniform float u_pulse3;
+
+float rand(vec2 co) {
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
-float digitalNoise(vec2 uv) {
-    float n = noise(floor(uv * 100.0) + vec2(u_time * 5.0, 0.0));
-    return step(0.9, n);
+float noise(vec2 p) {
+    vec2 ip = floor(p);
+    vec2 fp = fract(p);
+    fp = fp * fp * (3.0 - 2.0 * fp);
+    return mix(
+        mix(rand(ip), rand(ip + vec2(1.0, 0.0)), fp.x),
+        mix(rand(ip + vec2(0.0, 1.0)), rand(ip + vec2(1.0, 1.0)), fp.x),
+        fp.y
+    );
+}
+
+// Экстремальная резкость
+vec4 extremeSharpen(sampler2D tex, vec2 uv, float intensity) {
+    vec2 texelSize = vec2(1.0 / 512.0);
+    
+    vec4 c = texture2D(tex, uv);
+    vec4 n = texture2D(tex, uv + vec2(0.0, texelSize.y));
+    vec4 s = texture2D(tex, uv - vec2(0.0, texelSize.y));
+    vec4 e = texture2D(tex, uv + vec2(texelSize.x, 0.0));
+    vec4 w = texture2D(tex, uv - vec2(texelSize.x, 0.0));
+    
+    vec4 laplacian = -n - s - e - w + 4.0 * c;
+    return c + laplacian * intensity;
 }
 
 void main() {
     vec2 uv = v_texCoord;
-    vec4 color = texture2D(u_texture, uv);
+    float t = u_time;
     
-    // Резкий глитч-сдвиг
-    if (mod(u_time * 1.0, 3.0) < 0.1) {
-        float offset = noise(vec2(u_time, uv.y)) * 0.15;
-        color = texture2D(u_texture, vec2(uv.x + offset, uv.y));
+    // Блочная пикселизация в рандомных местах
+    vec2 blockCoord = floor(uv * 20.0);
+    float blockRand = rand(blockCoord + floor(t * 3.0));
+    
+    vec2 glitchUV = uv;
+    
+    // Горизонтальные глитч-бары
+    float barHeight = 0.05;
+    float barPos = floor(uv.y / barHeight);
+    float barGlitch = step(0.93, rand(vec2(barPos, floor(t * 8.0))));
+    
+    if (barGlitch > 0.5) {
+        glitchUV.x += (rand(vec2(barPos, t)) - 0.5) * 0.15 * u_pulse1;
     }
     
-    // Бинарный распад (только черный/белый)
-    if (mod(u_time * 1.0, 1.0) > 0.5) {
-        float bw = (color.r + color.g + color.b) / 3.0;
-        bw = step(0.5, bw);
-        color.rgb = vec3(bw);
+    // Вертикальные разрывы
+    float verticalSlice = floor(uv.x * 15.0);
+    float sliceGlitch = step(0.95, rand(vec2(verticalSlice, floor(t * 5.0))));
+    
+    if (sliceGlitch > 0.5) {
+        glitchUV.y += (rand(vec2(verticalSlice, t * 2.0)) - 0.5) * 0.1;
     }
     
-    // Добавление цифрового шума
-    if (noise(uv + vec2(u_time, 0.0)) > 0.7) {
-        color.rgb += digitalNoise(uv) * 0.8;
-        color.rgb = clamp(color.rgb, 0.0, 1.0);
+    // Зоны с экстремальной резкостью
+    float sharpnessMap = noise(uv * 3.0 + vec2(t * 0.2, 0.0));
+    float sharpIntensity = step(0.6, sharpnessMap) * (2.0 + u_pulse3 * 3.0);
+    
+    // RGB смещение с вращением
+    float angle = t + noise(uv * 0.0) * 6.28;
+    vec2 rgbOffset1 = vec2(cos(angle), sin(angle)) * 0.005;
+    vec2 rgbOffset2 = vec2(cos(angle + 2.09), sin(angle + 2.09)) * 0.005;
+    vec2 rgbOffset3 = vec2(cos(angle + 4.18), sin(angle + 4.18)) * 0.005;
+    
+    vec4 colorR = extremeSharpen(CC_Texture0, glitchUV + rgbOffset1, sharpIntensity);
+    vec4 colorG = extremeSharpen(CC_Texture0, glitchUV + rgbOffset2, sharpIntensity);
+    vec4 colorB = extremeSharpen(CC_Texture0, glitchUV + rgbOffset3, sharpIntensity);
+    
+    vec4 color = vec4(colorR.r, colorG.g, colorB.b, colorG.a);
+    
+    // Разрушение краёв - эрозия
+    float edgeMask = texture2D(CC_Texture0, uv).a;
+    float erosion = noise(uv * 50.0 + t);
+    
+    // Определяем край
+    float edge = abs(texture2D(CC_Texture0, uv + vec2(0.02, 0.0)).a - 
+                     texture2D(CC_Texture0, uv - vec2(0.02, 0.0)).a);
+    edge += abs(texture2D(CC_Texture0, uv + vec2(0.0, 0.02)).a - 
+                texture2D(CC_Texture0, uv - vec2(0.0, 0.02)).a);
+    
+    if (edge > 0.05) {
+        // На краю - применяем эрозию
+        float corruptionChance = noise(uv * 80.0 + t * 2.0);
+        if (corruptionChance > 0.7) {
+            color.a *= corruptionChance * (0.5 + u_pulse1 * 0.5);
+            // Цветные артефакты на краях
+            color.rgb += vec3(
+                rand(uv + t) * 0.3,
+                rand(uv + t + 0.1) * 0.3,
+                rand(uv + t + 0.2) * 0.3
+            );
+        }
     }
     
-    // Мерцание
-    //float flicker = sin(u_time * 30.0) * 0.9 + 0.9;
-    //color.rgb *= flicker;
-    
-    // Резкие черные полосы
-    float scanline = sin(uv.y * 300.0 + u_time * 10.0);
-    if (abs(scanline) > 0.99) {
-        color.rgb = vec3(0.0);
+    // Блочные артефакты
+    if (blockRand > 0.92) {
+        vec2 blockUV = blockCoord / 20.0;
+        vec4 blockColor = texture2D(CC_Texture0, blockUV);
+        color = mix(color, blockColor, 0.7);
     }
     
-    gl_FragColor = color;
+    // Цифровой шум на ярких участках
+    if (color.a > 0.5) {
+        float digitalNoise = rand(uv * 200.0 + t * 10.0);
+        if (digitalNoise > 0.97) {
+            color.rgb = vec3(digitalNoise);
+            color.a = 1.0;
+        }
+    }
+    
+    gl_FragColor = color * v_fragmentColor;
 }

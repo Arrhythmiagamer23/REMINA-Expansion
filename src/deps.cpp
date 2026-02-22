@@ -202,15 +202,24 @@ class $modify(CCFileUtilsResourcesExt, CCFileUtils) {
 
 #include <Geode/modify/CCSprite.hpp>
 class $modify(CCSpriteExt, CCSprite) {
-	void updateShader(float dt) {
+	void updateShader(float deltaTime) {
 		static float time = 0.0f;
-		time += dt;
-		if (auto* program = this->getShaderProgram()) {
-			program->use();
-			GLuint timeUniform = glGetUniformLocation(program->getProgram(), "u_time");
-			//android undef: if (timeUniform != GL_INVALID_INDEX) {
-				glUniform1f(timeUniform, time);
-			//}
+		time += deltaTime;
+		if (auto* glprogram = this->getShaderProgram()) {
+			glprogram->use();
+			auto p = glprogram->getProgram();
+			glUniform1f(glGetUniformLocation(p, "u_time"), time);
+			glUniform1f(glGetUniformLocation(p, "u_deltaTime"), deltaTime);
+			auto mouse = cocos::getMousePos();
+			glUniform1f(glGetUniformLocation(p, "u_mouseX"), mouse.x);
+			glUniform1f(glGetUniformLocation(p, "u_mouseY"), mouse.y);
+			glUniform2f(glGetUniformLocation(p, "u_mouse"), mouse.x, mouse.y);
+			auto fmod = FMODAudioEngine::sharedEngine();
+			if (!fmod->m_metering) fmod->enableMetering();
+			glUniform1f(glGetUniformLocation(p, "u_pulse1"), fmod->m_pulse1);
+			glUniform1f(glGetUniformLocation(p, "u_pulse2"), fmod->m_pulse2);
+			glUniform1f(glGetUniformLocation(p, "u_pulse3"), fmod->m_pulse3);
+			glUniform3f(glGetUniformLocation(p, "u_pulse"), fmod->m_pulse1, fmod->m_pulse2, fmod->m_pulse3);
 		}
 	}
 
