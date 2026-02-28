@@ -41,11 +41,6 @@
 			]
 		}
 	},
-	"api": {
-		"include": [
-			"resources/**/**/*.*"
-		]
-	},
 	"settings": {
 		"redir request urls": {
 			"name": "redir request urls",
