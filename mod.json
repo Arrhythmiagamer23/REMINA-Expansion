@@ -31,15 +31,10 @@
 			"importance": "suggested"
 		}
 	},
-	"resources": {
-		"sprites": [
-			"assets/sprites/**/**/*.png"
-		],
-		"spritesheets": {
-			"spritesheet": [
-				"assets/frames/**/**/*.png"
-			]
-		}
+	"spritesheets": {
+		"spritesheet": [
+			"assets/frames/**/**/*.png"
+		]
 	},
 	"settings": {
 		"redir request urls": {
