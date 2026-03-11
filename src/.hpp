@@ -49,10 +49,10 @@ public:
 		CCKeyboardDispatcher::get()->removeDelegate(this);
 	}
 	CREATE_FUNC(KeyEventListener);
-	void keyDown(enumKeyCodes key) override {
+	void keyDown(enumKeyCodes key, double) override {
 		if (m_keyDown) m_keyDown(key);
 	}
-	void keyUp(enumKeyCodes key) override {
+	void keyUp(enumKeyCodes key, double) override {
 		if (m_keyUp) m_keyUp(key);
 	}
 	auto onKeyDown(std::function<void(enumKeyCodes key)> keyDown) { m_keyDown = keyDown; return this; }
