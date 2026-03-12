@@ -79,9 +79,14 @@ jobs:
 
            The build workflow run goes in [#${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
-           ### [[INSTALLER/ZIP]](https://mega.nz/folder/Fos01BhA#v1RK6BQNy3woVb9S_SHNSQ) | Windows full game
-
-           ### [[DOWNLOAD MOD]](https://github.com/lil2kki/REMINA/releases/download/release/_lil2kki.remina.geode) | Android, iOS, macOS (manual install)
+           # Downloads
+           ## Executable stuff
+           For Windows there is installer and zipped game, for Android there is custom Geode Launcher.
+           https://disk.yandex.kz/d/kNs0_ctebnD__g
+           ## Mod package (manual install)
+           Yea for experienced users..
+           https://github.com/lil2kki/REMINA/releases/download/release/_lil2kki.remina.geode
+           ### Install guides by community: [Linux](https://discord.com/channels/1460005556918948017/1460005558563242067/1475962459817906428)
 
           tag: "release"
           prerelease: false
