@@ -5,9 +5,9 @@ permissions:
 
 on:
   workflow_dispatch:
-  #push:
-    #branches:
-      #- 'master'
+  push:
+    branches:
+      - 'master'
 
 jobs:
 
